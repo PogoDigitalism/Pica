@@ -3,11 +3,11 @@ import typing
 import socket
 import time
 
-from base.base_types import (identifier, 
+from src.base._types import (identifier, 
                              success,
                              host_names)
-from base.base_classes import (SocketBase)
-from base.base_constants import *
+from src.base.classes import (SocketBase)
+from src.base.constants import *
 
 
 class _Client(SocketBase):

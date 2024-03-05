@@ -1,4 +1,4 @@
-from base.base_constants import *
+from src.base.constants import *
 """
 schematic:
 
