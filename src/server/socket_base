@@ -1,5 +1,0 @@
-import socket
-
-class Server:
-    def __init__(self) -> None:
-        self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
