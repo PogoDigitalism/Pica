@@ -1,3 +1,4 @@
+from base.base_constants import *
 """
 schematic:
 
@@ -8,14 +9,6 @@ schematic:
     },
 ]
 """
-
-#ACTION TYPES
-INSERT = 0x00000000
-DELETE = 0x00000001
-MODIFY = 0x00000002
-MOVE = 0x00000003
-
-RENAME = 0x00000010
 
 class SchematicParser:
     """

@@ -6,13 +6,11 @@ import time
 from base.base_types import (identifier, 
                              success,
                              host_names)
-
-#Constants
-SOCKET_PORT = 80
-MAX_CONNECTIONS = 5
+from base.base_classes import (SocketBase)
+from base.base_constants import *
 
 
-class _Client:
+class _Client(SocketBase):
     """
     Unique connection handler between connectant and server.
     """
@@ -24,7 +22,10 @@ class _Client:
 
         self.connectant_socket.send(b"THIS IS A TEST")
 
-class Server:
+    def open(self):
+        ...
+
+class Server(SocketBase):
     """
     Server sided socket
     """
@@ -36,6 +37,7 @@ class Server:
         )
 
         self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        self._socket.settimeout(S_SOCKET_TIMEOUT)
         self._socket.bind((self._host_name, SOCKET_PORT))
         self._socket.listen(MAX_CONNECTIONS)
 
@@ -45,10 +47,8 @@ class Server:
         client = _Client(connectant=identifier, connectant_socket=connectant_socket)
         self._active_clients[connectant] = client
 
-
     def _handle_new_connection(self, connectant: identifier, connectant_socket: socket.socket) -> success:
         self._thread_pool.submit(self._create_new_client, connectant=connectant, connectant_socket=connectant_socket)
-
 
     def open(self) -> None:
         """
@@ -65,4 +65,3 @@ class Server:
             self._socket.close()
 
             raise
-        
