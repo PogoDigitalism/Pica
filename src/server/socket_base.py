@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import typing
 import socket
+import time
 
 from base.base_types import (identifier, 
                              success,
@@ -15,10 +16,13 @@ class _Client:
     """
     Unique connection handler between connectant and server.
     """
-    def __init__(self, connectant: identifier, client_socket: socket.socket) -> None:
-        self.client_socket = client_socket
+    def __init__(self, connectant: identifier, connectant_socket: socket.socket) -> None:
+        self.connectant_socket = connectant_socket
         self.connectant = connectant
 
+        print(self.connectant_socket.recv(6*1024))
+
+        self.connectant_socket.send(b"THIS IS A TEST")
 
 class Server:
     """
@@ -37,13 +41,13 @@ class Server:
 
         self._active_clients: dict[identifier, _Client]
 
-    def _create_new_client(self, connectant: identifier, client_socket: socket.socket):
-        client = _Client(connectant=identifier, client_socket=client_socket)
+    def _create_new_client(self, connectant: identifier, connectant_socket: socket.socket):
+        client = _Client(connectant=identifier, connectant_socket=connectant_socket)
         self._active_clients[connectant] = client
 
 
-    def _handle_new_connection(self, connectant: identifier, client_socket: socket.socket) -> success:
-        self._thread_pool.submit(self._create_new_client, connectant=connectant, client_socket=client_socket)
+    def _handle_new_connection(self, connectant: identifier, connectant_socket: socket.socket) -> success:
+        self._thread_pool.submit(self._create_new_client, connectant=connectant, connectant_socket=connectant_socket)
 
 
     def open(self) -> None:
@@ -52,12 +56,13 @@ class Server:
         """
         try:
             while True:
-                client_socket, address = self._socket.accept()
+                connectant_socket, address = self._socket.accept()
 
-                self._handle_new_connection(connectant=address, client_socket=client_socket)
+                self._handle_new_connection(connectant=address, connectant_socket=connectant_socket)
         except KeyboardInterrupt:
-            print("reached!")
+            print("reached")
 
             self._socket.close()
 
             raise
+        
