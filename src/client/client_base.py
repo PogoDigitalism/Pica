@@ -8,6 +8,8 @@ from base.base_types import (identifier,
                              success,
                              host_names)
 
+from .updater.update_base import UpdateHandler
+
 #Constants
 SOCKET_PORT = 80
 MAX_CONNECTIONS = 5
@@ -27,6 +29,8 @@ class Client:
         """
         connect connectant socket to download server
         """
+        # TODO: UpdateHandler(schematic) addition
+
         self._socket.connect((self._host_name, 80))
 
         h = self._socket.send(b"THIS IS A TEST")
