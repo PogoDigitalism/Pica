@@ -5,7 +5,7 @@ from abc import (ABC,
 from dataclasses import dataclass
 
 # ABSTRACT BASE CLASSES
-class SocketBase(ABC):
+class ABCSocketBase(ABC):
     """
     ABC used for any socket related handlers
     """

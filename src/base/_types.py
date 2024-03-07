@@ -2,7 +2,7 @@ import typing
 
 #Literals
 host_names = typing.Literal["localhost","127.0.0.1"]
-
+file_scope = typing.Literal["FILE", "APPLICATION"]
 
 #TypeAliases
 identifier: typing.TypeAlias = str
