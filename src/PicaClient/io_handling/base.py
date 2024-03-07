@@ -9,14 +9,23 @@ def is_admin():
     except:
         return False
 
-class UpdateHandler(SchematicParser):
+class File:
+    """
+    Bundles file operations, used in IOHandler
+    """
+    def __init__(self) -> None:
+        pass
+
+class IOHandler(SchematicParser): # NO INHERITANCE REALLY NEEDED
     def __init__(self, schematic: str) -> None:
 
         # parse schematic
-        super().__init__(schematic = str)
+        super().__init__(schematic = schematic)
         if not self.parsed_schematic:
             ...
 
+    def new_file(self):
+        ...
 
-    def implement(self):
+    def file_write(self):
         ...

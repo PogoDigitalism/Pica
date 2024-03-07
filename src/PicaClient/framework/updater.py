@@ -5,7 +5,8 @@ from client_base import Client
 
 from src.base._types import (identifier, 
                              success,
-                             host_names)
+                             host_names,
+                             file_scope)
 from src.base.classes import (SocketBase,
                                RecvData)
 from src.base.constants import *
@@ -19,8 +20,11 @@ class PicaUpdater(Client):
     def __init__(self, host_name: host_names = None) -> None:
         super().__init__(host_name=host_name)
 
-    def connect_to_server(self):
-        self.open()
+    def connect(self):
+        """
+        Connect to a Pica server with the client and start the updating procedure
+        """
+        self.initialize_connection()
 
     def stop(self):
         ...
@@ -40,17 +44,19 @@ class PicaUpdater(Client):
         """
         ...
 
-    def progress_callback(self, scope: typing.Literal["FILE", "APPLICATION"], func: typing.Callable, *args, **kwargs):
+    def progress_callback(self, scope: file_scope, func: typing.Callable, *args, **kwargs):
         """
         Set a callback function whenever the scoped object changes.
         Useful for giving download progress feedback in a GUI.
 
         Note: Setting a callback to "APPLICATION" scope will fire after all update files are processed.
         """
-        ...
+        self.progress_callbacks[scope] = {'func': func,
+                                          'args': args,
+                                          'kwargs': kwargs}
 
 
-    def get_progress(self, scope: typing.Literal["FILE", "APPLICATION"]) -> tuple[str, tuple[int, int]] | None:
+    def get_progress(self, scope: file_scope) -> tuple[str, tuple[int, int]] | None:
         """
         Returns progress information (consisting of the name of the scoped object, processed byte size and the total byte size).
 
@@ -60,4 +66,5 @@ class PicaUpdater(Client):
 
         Returns a tuple: (name, (processed, total))
         """
+        return self.progress[scope]
         ...
