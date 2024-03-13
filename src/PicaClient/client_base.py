@@ -6,6 +6,7 @@ import socket
 import traceback
 import time
 import threading
+import queue
 
 from base._types import (identifier, 
                              success,
@@ -16,7 +17,7 @@ from base.classes import (ABCSocketBase,
 from base.constants import *
 from base.exceptions import *
 
-from .io_handling.base import IOHandler
+from .io_handling.base import IOHandler, File
 
 # from .msg_type_handling.connection_init import CONNECTION_INIT_HANDLING
 
@@ -27,11 +28,14 @@ VERSION = version_file.read()
 print(VERSION)
 
 class MSGHandler:
-    def __init__(self) -> None:
+    def __init__(self, data_queue: queue.Queue) -> None:
+        self.__send_data_queue = data_queue
+
         self.progress_callbacks: dict[file_scope, dict[str]] = dict()
         self.progress: dict[file_scope, tuple[str, tuple[int, int]]] = tuple()
-    
+
     def MSG_ACCESS_DENIED_handler(self, parsed_data: RecvData):
+        self._is_active = None
         raise AccessDeniedError
 
     def MSG_HANDSHAKE_handler(self, parsed_data: RecvData):
@@ -64,28 +68,73 @@ class Client(ABCSocketBase, MSGHandler):
     Connectant sided socket
     """
     def __init__(self, host_name: host_names = None) -> None:
-        super().__init__()
-
         self._host_name = host_name or socket.gethostname()
         self._open_new_socket()
 
         self._lock = threading.Lock()
 
-        self._is_active = False
+        self._is_active = True # set to true for the execution loop
         self._is_open = False
-        self._data_queue: list[bytes] = list() 
+
+        self._send_data_queue = queue.Queue()
+        self._recv_callback_queue = queue.Queue()
+
+        self._incomplete_chunks: list[bytes] = list()
+        self._data_buffer: bytes = b''
+        self._latest_payload: bytes = b''
 
         #MSG HANDLER ATTRS
         self._handshake: bytes = None
         self._update_version: str = None
         self._update_handler: IOHandler = None
+        self._current_file: File = None
 
         self.progress_callback: typing.Callable = None
 
-    def _parse_incoming_data(self, data: bytes) -> RecvData | None:
-        data = data.decode(encoding="utf-8")
+        super().__init__(data_queue=self._send_data_queue)
 
-        data: list[bytes] = data.split(sep=DATA_SEPERATOR)
+    def _validate_data(self, data: bytes):
+        start_index = data.find(b'%s' % DATA_START)
+        end_index = data.find(b'%s' % DATA_END)
+
+        if start_index != -1:
+            if end_index != -1:
+                if start_index < end_index:
+                    # normal new clean msg
+                    ...
+                else:
+                    # left over in buffer
+                    completed_buffer = self._data_buffer + data[:end_index + len(DATA_END)]
+                    self._data_buffer = b''
+
+                    self._recv_callback_queue.put(completed_buffer)
+
+                    temp_buffer = data[end_index + len(DATA_END):]
+                    
+                    end_index = temp_buffer.find(b'%s' % DATA_END, start_index)
+
+                    if end_index != -1:
+                        ...
+                        self._recv_callback_queue.put(temp_buffer)
+
+                    else:
+                        self._data_buffer = temp_buffer
+                # start and end indicators found
+                ...
+            else:
+                ...
+                # start indicator found, end indicator missing
+        else:
+            if end_index != -1:
+                ...
+                # end indicator found, start indicator missing
+            else:
+                ...
+                # start and end indicators missing
+
+    @staticmethod
+    def _parse_payload(data: str) -> RecvData | None:
+        data = data.split(sep=DATA_SEPERATOR)
         if len(data) < 3:
             return
 
@@ -95,25 +144,29 @@ class Client(ABCSocketBase, MSGHandler):
         
         return parsed_data
 
-    def _put_data_queue(self, data: RecvData):
-        data_to_send = f'{data.msg_type};;;{data.msg_info};;;{data.msg_data}'
-
-        with self._lock:
-            self._data_queue.append(data_to_send)
+    def _put_payload_queue(self, data: RecvData):
+        data_to_send = f'{DATA_START}{data.msg_type}{DATA_SEPERATOR}{data.msg_info}{DATA_SEPERATOR}{data.msg_data}{DATA_END}'
+        self._send_data_queue.put(item=data_to_send)
 
     def _send_data_loop(self) -> None:
         """
         Threaded main data forwarding loop
         """
         while self._is_open:
-            with self._lock:
-                if self._data_queue:
-                    data = self._data_queue.pop(0)
+            data = self._send_data_queue.get(block=True)
 
             try:
                 self._socket.send(data)
             except Exception as e: # TODO CHANGE TO socket.timeout EXCEPTION HANDLER
                 traceback.print_exc()
+
+    def _execute_msg_callbacks(self):
+        while self._is_active:
+            validated_data = self._recv_callback_queue.get(block=True)
+
+            parsed_data = self._parse_payload(validated_data)
+
+            repeat = self.MSG_CALLBACKS[parsed_data.msg_type](parsed_data)
 
     def _receive_data_loop(self) -> None:
         """
@@ -123,12 +176,10 @@ class Client(ABCSocketBase, MSGHandler):
             try:
                 data = self._socket.recv(C_RECV_SIZE)
                 if data:
-                    parsed_data = self._parse_incoming_data(data)
+                    # validate and parse based on the protocol and put it in the callback queue
+                    self._validate_data(data)
 
-                    repeat = self.MSG_CALLBACKS[parsed_data.msg_type](parsed_data)
 
-                    # if not repeat:
-                    #     break
             except KeyError: # TODO CHANGE TO socket.timeout EXCEPTION HANDLER
                 pass
 
@@ -163,7 +214,7 @@ class Client(ABCSocketBase, MSGHandler):
 
                 RecvData(msg_type=MSG_DOWNLOAD_INIT,
                          msg_data=VERSION)
-                self._put_data_queue(data=RecvData)
+                self._put_payload_queue(data=RecvData)
 
             except Exception as e:
                 traceback.print_exc()

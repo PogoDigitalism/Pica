@@ -13,8 +13,12 @@ class File:
     """
     Bundles file operations, used in IOHandler
     """
-    def __init__(self) -> None:
-        pass
+    def __init__(self, file_name: str, file_location: str, file_size: int) -> None:
+        self.file_name = file_name
+        self.file_location = file_location
+        self.file_Size = file_size
+
+        # TEMP FILE CREATION LOGIC:
 
 class IOHandler(SchematicParser): # NO INHERITANCE REALLY NEEDED
     def __init__(self, schematic: str) -> None:
@@ -24,7 +28,7 @@ class IOHandler(SchematicParser): # NO INHERITANCE REALLY NEEDED
         if not self.parsed_schematic:
             ...
 
-    def new_file(self):
+    def new_file(self) -> File:
         ...
 
     def file_write(self):
